@@ -1,13 +1,14 @@
 import asyncio
 import sqlite3
+import os
+
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 
-import os
-
-TOKEN = os.getenv("8667480610:AAHtzhtHv8VFe1Ss6_gs0zuYrecivZse6EE")
-ADMIN_ID = int(os.getenv("7950739069"))
+# ===== ENV =====
+TOKEN = os.getenv("TOKEN")
+ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -51,11 +52,10 @@ reset_kb = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
-# ===== QUESTION SENDER =====
+# ===== SEND QUESTION =====
 async def send_question(user_id):
     step = user_step[user_id]
     await bot.send_message(user_id, questions[step])
-
 
 # ===== START =====
 @dp.message(Command("start"))
@@ -72,8 +72,7 @@ async def start(message: types.Message):
 
     await send_question(user_id)
 
-
-# ===== RESET BUTTON =====
+# ===== RESET =====
 @dp.message(lambda message: message.text == "🔄 Начать заново")
 async def restart(message: types.Message):
     user_id = message.from_user.id
@@ -88,14 +87,12 @@ async def restart(message: types.Message):
 
     await send_question(user_id)
 
-
 # ===== MAIN HANDLER =====
 @dp.message()
 async def handler(message: types.Message):
     user_id = message.from_user.id
     user = message.from_user
 
-    # защита если не начал анкету
     if user_id not in user_step:
         await message.answer("Нажми /start чтобы начать анкету")
         return
@@ -118,10 +115,10 @@ async def handler(message: types.Message):
             + result
         )
 
-        # отправка админу
+        # send admin
         await bot.send_message(ADMIN_ID, final_text)
 
-        # сохранение в базу
+        # save DB
         cursor.execute(
             "INSERT INTO applications (user_id, username, data) VALUES (?, ?, ?)",
             (user_id, username, result)
@@ -133,19 +130,16 @@ async def handler(message: types.Message):
             reply_markup=reset_kb
         )
 
-        # очистка
         user_data[user_id] = []
         user_step[user_id] = 0
 
     else:
         await send_question(user_id)
 
-
 # ===== START BOT =====
 async def main():
     print("BOT STARTED")
     await dp.start_polling(bot)
-
 
 if __name__ == "__main__":
     asyncio.run(main())
